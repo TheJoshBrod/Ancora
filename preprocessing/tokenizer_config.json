@@ -1,0 +1,6 @@
+{
+  "0": "PAD",
+  "1-63": "FRET_COMBOS_BITMASK",
+  "64": "BOS",
+  "65": "EOS"
+}

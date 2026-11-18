@@ -3,6 +3,14 @@
 # Generic — works across all projects
 ########################
 
+# Ignore the songs directory which contains dataset files
+songs/*
+
+# Preprocessing output (tokens, extracted .sng, manifest, split)
+data/
+
+
+
 ########################
 # Secrets / Environment
 ########################

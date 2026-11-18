@@ -1,0 +1,11 @@
+# Preprocessing pipeline (preprocessing/)
+mido==1.3.3
+numpy
+pandas
+av            # PyAV: decodes .opus/.ogg/.mp3 stems
+torch
+torchaudio
+encodec
+
+# Only needed by preprocessing/legacy/
+pydub==0.25.1
