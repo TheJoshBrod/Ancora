@@ -1,13 +1,8 @@
-# Preprocessing pipeline (preprocessing/)
-#
-# torch is pinned to the CUDA 12.8 build: the default PyPI wheel (2.15+cu132)
-# segfaults on first CUDA use under WSL2 with an RTX 50-series GPU.
---extra-index-url https://download.pytorch.org/whl/cu128
+# Under WSL2, CUDA 13 torch segfaults if a Linux NVIDIA driver is installed (e.g. pulled in by apt's nvidia-cuda-toolkit).
+--extra-index-url https://download.pytorch.org/whl/cu132
 mido==1.3.3
 numpy
 pandas
-av            # PyAV: decodes .opus/.ogg/.mp3 stems
-torch==2.11.*
+av
+torch==2.15.*
 torchaudio==2.11.*
-encodec
-
