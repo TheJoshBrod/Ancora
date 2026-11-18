@@ -1,9 +1,13 @@
 # Preprocessing pipeline (preprocessing/)
+#
+# torch is pinned to the CUDA 12.8 build: the default PyPI wheel (2.15+cu132)
+# segfaults on first CUDA use under WSL2 with an RTX 50-series GPU.
+--extra-index-url https://download.pytorch.org/whl/cu128
 mido==1.3.3
 numpy
 pandas
 av            # PyAV: decodes .opus/.ogg/.mp3 stems
-torch
-torchaudio
+torch==2.11.*
+torchaudio==2.11.*
 encodec
 
