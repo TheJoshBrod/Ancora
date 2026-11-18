@@ -1,6 +1,6 @@
-# Track2Hero
+# Ancora
 
-Track2Hero is an open-source audio-to-chart system for generating Clone Hero–compatible lead guitar charts from music audio.
+Ancora is an open-source audio-to-chart system for generating Clone Hero–compatible lead guitar charts from music audio.
 
 ## Current Scope (MVP)
 
