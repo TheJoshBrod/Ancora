@@ -1,6 +1,6 @@
 # References
 
-Papers and prior work relevant to Track2Hero. PDFs are kept locally and are
+Papers and prior work relevant to Ancora. PDFs are kept locally and are
 **not committed** (see `.gitignore`); each entry links to the public source.
 
 | Paper | Link | Local file | Notes |
