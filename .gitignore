@@ -9,6 +9,9 @@ songs/*
 # Preprocessing output (tokens, extracted .sng, manifest, split)
 data/
 
+# Reference papers: keep locally, track only references/README.md
+references/*.pdf
+
 
 
 ########################
