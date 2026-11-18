@@ -17,7 +17,6 @@ split.py            ->  data/dataset_split.json
 | `audio_processor.py` | Mixes all stems to 24 kHz mono and encodes them with EnCodec (6 kbps) |
 | `process_batch.py` | Runs everything above over a folder and writes the manifest |
 | `split.py` | Song-grouped train/val/test split (no leakage between versions of a song) |
-| `legacy/` | The original May pipeline (ticks-only JSON + WAV), kept for reference |
 
 ## Usage
 
