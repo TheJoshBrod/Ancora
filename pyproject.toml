@@ -1,0 +1,60 @@
+[project]
+name = "ancora"
+version = "0.1.0"
+description = "Audio-to-chart generation of Clone Hero lead guitar charts"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "av",
+    "encodec",
+    "mido==1.3.3",
+    "numpy",
+    "pandas",
+    "torch==2.15.*",
+    "torchaudio==2.11.*",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "pyright",
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
+
+# Under WSL2, CUDA 13 torch segfaults if a Linux NVIDIA driver is installed
+# (e.g. pulled in by apt's nvidia-cuda-toolkit).
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu132" }
+torchaudio = { index = "pytorch-cu132" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".semgrep", "env"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N", "NPY", "PTH", "RUF"]
+
+[tool.pyright]
+include = ["src", "scripts"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = ["--import-mode=importlib"]
