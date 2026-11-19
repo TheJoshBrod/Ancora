@@ -31,9 +31,9 @@ def main():
         help='Also compute features from a separate guitar stem when the song has one',
     )
     parser.add_argument(
-        '--include-duplicates',
+        '--primary-only',
         action='store_true',
-        help='Process every copy of a song instead of the first one found',
+        help='Process only the primary chart of each song, not every copy',
     )
     parser.add_argument('--reprocess', action='store_true', help='Re-run songs already marked done')
     args = parser.parse_args()
@@ -48,7 +48,7 @@ def main():
         limit=args.limit,
         features=args.features,
         guitar_stem=args.guitar_stem,
-        include_duplicates=args.include_duplicates,
+        primary_only=args.primary_only,
         reprocess=args.reprocess,
     )
 

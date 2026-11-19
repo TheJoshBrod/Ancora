@@ -24,8 +24,11 @@ uv run scripts/split.py --data data --check
 ```
 
 - `--features` takes any of `encodec` (default), `latents` and `mel`.
-- Later copies of the same song are marked `duplicate_of` in `catalog.csv` and
-  skipped unless `--include-duplicates`.
+- When a song has several charts, every readable copy is processed. The first
+  readable copy, in `--source` order, is the song's primary chart; the others
+  name it in `duplicate_of` (in `catalog.csv` and `manifest.csv`). List the folder
+  you trust most first, such as your converted official charts. `--primary-only`
+  processes one chart per song. All copies of a song land in the same split.
 - Songs already marked `done` are skipped on re-runs; `--reprocess` redoes them.
 - Keep `--out` on the WSL disk (the default `data/`): reading training data from
   `/mnt/c` is slow.
@@ -35,7 +38,7 @@ uv run scripts/split.py --data data --check
 Under `--out` (default `data/`):
 
 ```
-catalog.csv                     every chart found, with duplicates marked
+catalog.csv                     every chart found; non-primary copies marked
 manifest.csv                    one row per processed song, with QA columns
 tokenizer_config.json           token ids, vocab size and sustain classes in use
 dataset_split.json              train/val/test song ids (scripts/split.py)

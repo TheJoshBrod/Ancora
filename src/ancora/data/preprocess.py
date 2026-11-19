@@ -31,6 +31,7 @@ MANIFEST_COLUMNS = (
         'charter',
         'source_dir',
         'source_folder',
+        'duplicate_of',
         'chart_format',
         'resolution',
         'difficulties',
@@ -147,14 +148,18 @@ def build_catalog(sources, out_dir):
     ids = make_song_ids([f for f, _, _ in entries])
     rows = [catalog_row(f, k, s, sid) for (f, k, s), sid in zip(entries, ids, strict=True)]
     catalog = pd.DataFrame(rows)
-    if len(catalog):
-        first = {}
-        for i, key in enumerate(catalog['group_key']):
-            if key in first:
-                catalog.at[i, 'duplicate_of'] = first[key]
-            else:
-                first[key] = catalog.at[i, 'song_id']
+    primary = {}
+    for i in sorted(range(len(rows)), key=lambda i: not _readable(rows[i])):
+        key = rows[i]['group_key']
+        if key in primary:
+            catalog.at[i, 'duplicate_of'] = primary[key]
+        else:
+            primary[key] = rows[i]['song_id']
     return catalog, {sid: (f, s) for (f, _, s), sid in zip(entries, ids, strict=True)}
+
+
+def _readable(row):
+    return row['error_msg'] == '' and row['difficulties'] != ''
 
 
 def _sustain_cutoff_beats(chart):
@@ -293,7 +298,7 @@ def run(
     limit=None,
     features=('encodec',),
     guitar_stem=False,
-    include_duplicates=False,
+    primary_only=False,
     reprocess=False,
 ):
     out_dir = Path(out_dir).resolve()
@@ -318,9 +323,9 @@ def run(
     done_ids = set() if reprocess else set(manifest[manifest['status'] == 'done']['song_id'])
     encoders = build_encoders(features)
 
-    todo = catalog if include_duplicates else catalog[catalog['duplicate_of'] == '']
+    todo = catalog[catalog['duplicate_of'] == ''] if primary_only else catalog
     processed = 0
-    for song_id in todo['song_id']:
+    for song_id, duplicate_of in zip(todo['song_id'], todo['duplicate_of'], strict=True):
         if limit is not None and processed >= limit:
             break
         if song_id in done_ids:
@@ -328,6 +333,7 @@ def run(
         folder, source_dir = locations[song_id]
         logger.info("Processing %s...", folder.name)
         row = process_folder(folder, source_dir, song_id, out_dir, encoders, guitar_stem)
+        row['duplicate_of'] = duplicate_of
         logger.info(
             "  -> %s: %s notes [%s]%s",
             row['status'],

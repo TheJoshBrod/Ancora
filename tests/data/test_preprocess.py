@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from test_factories import write_audio, write_chart
 
 from ancora.data import preprocess as pp
@@ -36,6 +37,36 @@ def test_process_folder():
         assert list(raw['section_names']) == ['Intro', 'Chorus 1']
         mel = np.load(song_dir / 'mel_beat48.npy')
         assert mel.shape == (len(subdivision_times(raw['beats_chart'])), mel_encoder.n_mels)
+
+
+def test_catalog_primary_follows_source_order(tmp_path):
+    official, chorus = tmp_path / 'official', tmp_path / 'chorus'
+    broken = official / 'Tester - Test Song (Broken)'
+    write_chart(broken)
+    (broken / 'notes.chart').unlink()
+    (broken / 'notes.mid').write_bytes(b'MThd\x00\x00\x00\x06\x00\x01')
+    write_chart(official / 'Tester - Test Song (Official)')
+    write_chart(chorus / 'Tester - Test Song (A Fan)')
+    catalog, _ = pp.build_catalog([str(chorus), str(official)], str(tmp_path / 'out'))
+    assert catalog.loc[catalog['duplicate_of'] == '', 'folder'].tolist() == [
+        'Tester - Test Song (A Fan)'
+    ]
+    catalog, _ = pp.build_catalog([str(official), str(chorus)], str(tmp_path / 'out'))
+    assert catalog.loc[catalog['duplicate_of'] == '', 'folder'].tolist() == [
+        'Tester - Test Song (Official)'
+    ]
+
+
+def test_run_processes_every_copy(tmp_path):
+    for name in ('Tester - Test Song (Me)', 'Tester - Test Song (Someone Else)'):
+        write_chart(tmp_path / 'src' / name)
+        write_audio(tmp_path / 'src' / name)
+    pp.run([str(tmp_path / 'src')], tmp_path / 'out', features=['mel'])
+    manifest = pd.read_csv(tmp_path / 'out' / 'manifest.csv', keep_default_na=False)
+    assert list(manifest['status']) == ['done', 'done']
+    assert (manifest['duplicate_of'] != '').sum() == 1
+    pp.run([str(tmp_path / 'src')], tmp_path / 'out2', features=['mel'], primary_only=True)
+    assert len(pd.read_csv(tmp_path / 'out2' / 'manifest.csv')) == 1
 
 
 def test_run_writes_vocab_config(tmp_path):
