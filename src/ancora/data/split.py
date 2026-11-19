@@ -64,11 +64,23 @@ def group_songs(rows):
     return list(groups.values())
 
 
-def run(data_dir, include_tokens_only=False, seed=0):
+def find_leaks(split, rows):
+    assigned = {sid: name for name, ids in split.items() for sid in ids}
+    leaks = []
+    for group in group_songs(rows):
+        names = sorted({assigned[s] for s in group if s in assigned})
+        if len(names) > 1:
+            leaks.append((group, names))
+    dupes = [sid for sid in assigned if sum(sid in ids for ids in split.values()) > 1]
+    if dupes:
+        leaks.append((dupes, ['listed in several splits']))
+    return leaks
+
+
+def run(data_dir, check=False, seed=0):
     data_dir = Path(data_dir)
     manifest = pd.read_csv(data_dir / 'manifest.csv')
-    ok = ['done', 'tokens_only'] if include_tokens_only else ['done']
-    manifest = manifest[manifest['status'].isin(ok) & (manifest['n_notes_medium'] > 0)]
+    manifest = manifest[(manifest['status'] == 'done') & (manifest['n_notes_total'] > 0)]
     rows = list(zip(manifest['song_id'], manifest['artist'], manifest['title'], strict=True))
 
     split_path = data_dir / 'dataset_split.json'
@@ -76,6 +88,12 @@ def run(data_dir, include_tokens_only=False, seed=0):
     if split_path.exists():
         with split_path.open() as f:
             split = json.load(f)
+    if check:
+        leaks = find_leaks(split, rows)
+        for group, names in leaks:
+            logger.warning("Leak: %s in %s", group, names)
+        logger.info('No leaks.' if not leaks else f'{len(leaks)} leak(s).')
+        return 1 if leaks else 0
     assigned = {sid: name for name, ids in split.items() for sid in ids}
 
     rng = random.Random(seed)
@@ -100,6 +118,8 @@ def run(data_dir, include_tokens_only=False, seed=0):
 
     with split_path.open('w') as f:
         json.dump(split, f, indent=2)
+    for group, names in find_leaks(split, rows):
+        logger.warning("Leak after splitting: %s in %s", group, names)
 
     logger.info(
         "%d charts in %d song groups (%d new groups).", len(rows), len(group_songs(rows)), n
@@ -107,3 +127,4 @@ def run(data_dir, include_tokens_only=False, seed=0):
     for name, ids in split.items():
         logger.info("  %s: %d charts", name, len(ids))
     logger.info("Saved %s", split_path)
+    return 0

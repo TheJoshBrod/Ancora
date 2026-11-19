@@ -14,15 +14,15 @@ def main():
         '--data', default='data', help='Folder with manifest.csv (output of scripts/preprocess.py)'
     )
     parser.add_argument(
-        '--include-tokens-only',
+        '--check',
         action='store_true',
-        help='Also split songs processed with --no-audio',
+        help='Only check the existing split for leaks; exit 1 if any',
     )
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
-    split.run(args.data, include_tokens_only=args.include_tokens_only, seed=args.seed)
+    sys.exit(split.run(args.data, check=args.check, seed=args.seed))
 
 
 if __name__ == '__main__':

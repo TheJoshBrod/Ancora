@@ -30,12 +30,14 @@ Early-stage development / proof of concept.
 ```bash
 uv sync                       # create .venv from uv.lock (CUDA 13.2 torch)
 uv run pre-commit install     # ruff, pyright, semgrep and file checks on every commit
+uv run pytest
 ```
 
 | Path | Contents |
 | --- | --- |
 | `src/ancora/data/` | Chart parsing, tokenizer, audio features, preprocessing pipeline |
 | `scripts/` | Thin command-line entry points (`preprocess.py`, `split.py`, ...) |
+| `tests/` | pytest suite |
 | `docs/preprocessing.md` | Preprocessing outputs and usage |
 | `.semgrep/` | Project semgrep rules; `semgrep --test --config .semgrep/rules.yml .semgrep/rules.py` checks them |
 | `data/`, `outputs/` | Generated data and run outputs (gitignored) |
