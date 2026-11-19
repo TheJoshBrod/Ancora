@@ -38,6 +38,19 @@ def test_process_folder():
         assert mel.shape == (len(subdivision_times(raw['beats_chart'])), mel_encoder.n_mels)
 
 
+def test_catalog_keeps_official_chart(tmp_path):
+    src = tmp_path / 'src'
+    write_chart(src / 'Tester - Test Song (Fan)', charter='Fan')
+    write_chart(src / 'Tester - Test Song (Harmonix)', charter='<color=#fff>Harmonix</color>')
+    broken = src / 'Tester - Test Song (Neversoft)'
+    write_chart(broken, charter='Neversoft')
+    (broken / 'notes.chart').unlink()
+    (broken / 'notes.mid').write_bytes(b'MThd\x00\x00\x00\x06\x00\x01')
+    catalog, _ = pp.build_catalog([str(src)], str(tmp_path / 'out'))
+    kept = catalog.loc[catalog['duplicate_of'] == '', 'folder'].tolist()
+    assert kept == ['Tester - Test Song (Harmonix)']
+
+
 def test_run_writes_vocab_config(tmp_path):
     write_chart(tmp_path / 'src' / 'song')
     pp.run([str(tmp_path / 'src')], tmp_path / 'out', features=['mel'], limit=0)

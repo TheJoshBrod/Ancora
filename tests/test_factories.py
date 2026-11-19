@@ -43,10 +43,10 @@ CHART = """[Song]
 """
 
 
-def write_chart(folder, ini_delay=None):
+def write_chart(folder, ini_delay=None, charter='Me'):
     folder.mkdir(parents=True, exist_ok=True)
     (folder / 'notes.chart').write_text(CHART)
-    ini = '[song]\nname = Test Song\nartist = Tester\ncharter = Me\n'
+    ini = f'[song]\nname = Test Song\nartist = Tester\ncharter = {charter}\n'
     if ini_delay is not None:
         ini += f'delay = {ini_delay}\n'
     (folder / 'song.ini').write_text(ini)

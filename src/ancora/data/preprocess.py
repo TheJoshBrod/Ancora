@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,10 @@ from ancora.data.tokenizer.services import (
 )
 
 logger = logging.getLogger(__name__)
+
+OFFICIAL_CHARTERS = frozenset(
+    {'harmonix', 'neversoft', 'vicarious visions', 'freestylegames', 'budcat', 'beenox'}
+)
 
 MANIFEST_COLUMNS = (
     [
@@ -147,14 +152,20 @@ def build_catalog(sources, out_dir):
     ids = make_song_ids([f for f, _, _ in entries])
     rows = [catalog_row(f, k, s, sid) for (f, k, s), sid in zip(entries, ids, strict=True)]
     catalog = pd.DataFrame(rows)
-    if len(catalog):
-        first = {}
-        for i, key in enumerate(catalog['group_key']):
-            if key in first:
-                catalog.at[i, 'duplicate_of'] = first[key]
-            else:
-                first[key] = catalog.at[i, 'song_id']
+    kept = {}
+    for i in sorted(range(len(rows)), key=lambda i: _keep_rank(rows[i])):
+        key = rows[i]['group_key']
+        if key in kept:
+            catalog.at[i, 'duplicate_of'] = kept[key]
+        else:
+            kept[key] = rows[i]['song_id']
     return catalog, {sid: (f, s) for (f, _, s), sid in zip(entries, ids, strict=True)}
+
+
+def _keep_rank(row):
+    readable = row['error_msg'] == '' and row['difficulties'] != ''
+    charter = re.sub(r'<[^>]*>', '', row['charter']).strip().lower()
+    return (not readable, charter not in OFFICIAL_CHARTERS)
 
 
 def _sustain_cutoff_beats(chart):
