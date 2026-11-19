@@ -7,7 +7,10 @@
 songs/*
 
 # Preprocessing output (tokens, extracted .sng, manifest, split)
-data/
+/data/
+
+# Training outputs: checkpoints, logs, samples
+/outputs/
 
 # Reference papers: keep locally, track only references/README.md
 references/*.pdf
@@ -388,3 +391,6 @@ compile_commands.json
 
 # Build artifact dirs (multi-ecosystem: Rust/Maven/PyBuilder)
 target/
+
+# Local session handoff notes
+docs/handoff/

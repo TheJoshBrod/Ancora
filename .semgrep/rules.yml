@@ -1,0 +1,53 @@
+rules:
+  - id: no-docstrings
+    languages: [python]
+    severity: WARNING
+    message: Docstrings are not allowed; make the code self-explanatory instead.
+    pattern-either:
+      - patterns:
+          - pattern-regex: '\A(?:[ \t]*(?:#[^\n]*)?\n)*[ \t]*(?P<DOC>[rRuU]?["''])'
+          - focus-metavariable: $DOC
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  def $F(...):
+                    $DOC
+                    ...
+              - pattern: |
+                  class $C:
+                    $DOC
+                    ...
+              - pattern: |
+                  class $C(...):
+                    $DOC
+                    ...
+          - metavariable-regex:
+              metavariable: $DOC
+              regex: ^[rRuU]?("|')
+          - focus-metavariable: $DOC
+
+  - id: no-local-imports
+    languages: [python]
+    severity: WARNING
+    message: Imports belong at module level, not inside functions.
+    patterns:
+      - pattern-either:
+          - pattern: import $M
+          - pattern: from $M import $X
+      - pattern-inside: |
+          def $F(...):
+            ...
+
+  - id: hardcoded-absolute-path
+    languages: [python]
+    severity: ERROR
+    message: No machine-specific paths; take paths from arguments or config.
+    pattern-regex: '["''](/home/|/Users/|/mnt/|[A-Z]:[\\/])[^"'']*["'']'
+
+  - id: print-in-library-code
+    languages: [python]
+    severity: WARNING
+    message: Use logging instead of print in src/; print belongs in scripts/.
+    pattern: print(...)
+    paths:
+      include: [src/]

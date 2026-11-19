@@ -1,44 +1,35 @@
-"""Batch preprocessing: Clone Hero songs -> EnCodec audio codes + 100ms note tokens.
-
-The source directory may contain extracted song folders (notes.chart / notes.mid,
-song.ini, audio stems) and/or packed .sng files. .sng files are extracted into
-<out>/extracted/<name>/ first, then processed like any other folder.
-
-Outputs (under --out):
-  tokens/<song_id>/audio_codes.npy     EnCodec codes (skipped with --no-audio)
-  tokens/<song_id>/tokens_100ms.npy    fret-bitmask tokens on a 100ms grid
-  tokens/<song_id>/sustain_100ms.npy   sustain length (s) per grid cell
-  tokens/<song_id>/events_raw.npz      (time_s, bitmask, duration_s) events
-  manifest.csv                         one row per song with QA flags
-
-Usage:
-  python process_batch.py --source "/mnt/c/Users/me/Documents/Clone Hero/Songs" --out ../data
-  python process_batch.py --source /mnt/d/songs --out ../data --limit 3
-"""
-import argparse
-import os
-import sys
+import logging
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
-# Fix print encoding on Windows
-if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
+from ancora.data.audio import AudioEncoder
+from ancora.data.chart import parse_ini, parse_song
+from ancora.data.sng import extract_sng
+from ancora.data.tokenizer import save_tokens, tokenize_events
 
-from chart_parser import parse_song, parse_ini
-from tokenizer import tokenize_events, save_tokens
-from sng_parser import extract_sng
+logger = logging.getLogger(__name__)
 
 MANIFEST_COLUMNS = [
-    'song_id', 'title', 'artist', 'source_folder', 'duration_s', 'has_medium',
-    'n_notes_medium', 'min_ioi_ms', 'collision_100ms', 'status', 'error_msg',
-    'alignment_suspect', 'outlier_length',
+    'song_id',
+    'title',
+    'artist',
+    'source_folder',
+    'duration_s',
+    'has_medium',
+    'n_notes_medium',
+    'min_ioi_ms',
+    'collision_100ms',
+    'status',
+    'error_msg',
+    'alignment_suspect',
+    'outlier_length',
 ]
 
 
 def load_manifest(manifest_path):
-    if os.path.exists(manifest_path):
+    if Path(manifest_path).exists():
         df = pd.read_csv(manifest_path)
         for col in MANIFEST_COLUMNS:
             if col not in df.columns:
@@ -52,7 +43,6 @@ def get_song_id(folder_name):
 
 
 def collect_song_folders(source_dir, out_dir):
-    """Returns song folders from source_dir, extracting any .sng files first."""
     source = Path(source_dir)
     extract_root = Path(out_dir) / 'extracted'
     folders = []
@@ -65,12 +55,12 @@ def collect_song_folders(source_dir, out_dir):
                 try:
                     meta = extract_sng(str(entry), str(dest))
                 except Exception as e:
-                    print(f"[!] Failed to extract {entry.name}: {e}")
+                    logger.warning("Failed to extract %s: %s", entry.name, e)
                     continue
                 # .sng keeps song.ini fields in its metadata block; write them
                 # out so parse_ini / parse_song can read delay, name, artist.
                 if meta and not (dest / 'song.ini').exists():
-                    with open(dest / 'song.ini', 'w', encoding='utf-8') as f:
+                    with (dest / 'song.ini').open('w', encoding='utf-8') as f:
                         f.write('[song]\n')
                         for k, v in meta.items():
                             f.write(f'{k} = {v}\n')
@@ -79,12 +69,11 @@ def collect_song_folders(source_dir, out_dir):
 
 
 def process_folder(folder, out_dir, encoder):
-    """Processes one song folder. Returns a manifest row dict."""
     folder_name = folder.name
     song_id = get_song_id(folder_name)
     ini_data = parse_ini(str(folder / 'song.ini'))
 
-    row = {
+    row: dict[str, Any] = {
         'song_id': song_id,
         'title': ini_data.get('name', 'Unknown'),
         'artist': ini_data.get('artist', 'Unknown'),
@@ -137,52 +126,39 @@ def process_folder(folder, out_dir, encoder):
     return row
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--source', required=True, help='Folder of song folders and/or .sng files')
-    parser.add_argument('--out', default='data', help='Output folder (default: ./data)')
-    parser.add_argument('--limit', type=int, default=None, help='Process at most N new songs')
-    parser.add_argument('--no-audio', action='store_true',
-                        help='Skip EnCodec audio encoding (charts/tokens only, no torch needed)')
-    parser.add_argument('--reprocess', action='store_true',
-                        help='Re-run songs already marked done in the manifest')
-    args = parser.parse_args()
-
-    out_dir = os.path.abspath(args.out)
-    os.makedirs(out_dir, exist_ok=True)
-    manifest_path = os.path.join(out_dir, 'manifest.csv')
+def run(source, out_dir, limit=None, no_audio=False, reprocess=False):
+    out_dir = Path(out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = out_dir / 'manifest.csv'
     manifest = load_manifest(manifest_path)
-    done_ids = set() if args.reprocess else set(manifest[manifest['status'] == 'done']['song_id'])
+    done_ids = set() if reprocess else set(manifest[manifest['status'] == 'done']['song_id'])
 
-    encoder = None
-    if not args.no_audio:
-        from audio_processor import AudioEncoder  # heavy: torch + encodec
-        encoder = AudioEncoder()
+    encoder = None if no_audio else AudioEncoder()
 
-    folders = collect_song_folders(args.source, out_dir)
-    print(f"Found {len(folders)} songs in {args.source} ({len(done_ids)} already done).")
+    folders = collect_song_folders(source, out_dir)
+    logger.info("Found %d songs in %s (%d already done).", len(folders), source, len(done_ids))
 
     processed = 0
     for folder in folders:
-        if args.limit is not None and processed >= args.limit:
+        if limit is not None and processed >= limit:
             break
         song_id = get_song_id(folder.name)
         if song_id in done_ids:
             continue
 
-        print(f"Processing {folder.name}...")
+        logger.info("Processing %s...", folder.name)
         row = process_folder(folder, out_dir, encoder)
-        print(f"  -> {row['status']}: {row['n_notes_medium']} notes"
-              + (f" ({row['error_msg']})" if row['error_msg'] else ''))
+        logger.info(
+            "  -> %s: %s notes%s",
+            row['status'],
+            row['n_notes_medium'],
+            f" ({row['error_msg']})" if row['error_msg'] else '',
+        )
 
         # Replace any previous row for this song, then save after every song
-        manifest = manifest[manifest['song_id'] != song_id]
+        manifest = manifest.loc[manifest['song_id'] != song_id]
         manifest = pd.concat([manifest, pd.DataFrame([row])], ignore_index=True)
         manifest.to_csv(manifest_path, index=False)
         processed += 1
 
-    print(f"Done. Processed {processed} songs. Manifest: {manifest_path}")
-
-
-if __name__ == '__main__':
-    main()
+    logger.info("Done. Processed %d songs. Manifest: %s", processed, manifest_path)
