@@ -10,7 +10,6 @@ Ancora is an open-source audio-to-chart system for generating Clone Hero–compa
 
 The goal is to produce a playable, beat-aligned guitar track that can be used in Clone Hero.
 
-
 ## Technical Approach
 
 - Architecture: Transformer-based sequence-to-sequence model designed to map acoustic features directly to chart events.
@@ -33,11 +32,19 @@ uv run pre-commit install     # ruff, pyright, semgrep and file checks on every 
 uv run pytest
 ```
 
+To build a training dataset from your Clone Hero songs, see
+[docs/preprocessing.md](docs/preprocessing.md).
+
 | Path | Contents |
 | --- | --- |
 | `src/ancora/data/` | Chart parsing, tokenizer, audio features, preprocessing pipeline |
 | `scripts/` | Thin command-line entry points (`preprocess.py`, `split.py`, ...) |
-| `tests/` | pytest suite |
-| `docs/preprocessing.md` | Preprocessing outputs and usage |
-| `.semgrep/` | Project semgrep rules; `semgrep --test --config .semgrep/rules.yml .semgrep/rules.py` checks them |
-| `data/`, `outputs/` | Generated data and run outputs (gitignored) |
+| `docs/` | Usage docs |
+| `tests/` | pytest suite, mirroring `src/` |
+| `.semgrep/` | Project semgrep rules and their tests |
+| `references/` | Index of related papers (PDFs stay local) |
+| `data/`, `outputs/`, `songs/` | Generated data, run outputs and local song files (all gitignored) |
+
+The pre-commit hook brings its own semgrep. To test the rules themselves, install the
+CLI (`pipx install semgrep`) and run
+`semgrep --test --config .semgrep/rules.yml .semgrep/rules.py`.
